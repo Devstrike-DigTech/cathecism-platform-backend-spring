@@ -70,6 +70,83 @@ type Query {
   Get the currently authenticated user
   """
   me: User
+
+  # =====================================================
+  # Phase 2: Explanation System Queries
+  # =====================================================
+
+  """
+  Get a single explanation by ID
+  """
+  explanation(id: UUID!): Explanation
+
+  """
+  Get explanations for a specific question.
+  Can filter by status and language.
+  """
+  explanationsForQuestion(
+    questionId: UUID!
+    status: ExplanationStatus
+    languageCode: String
+  ): [Explanation!]!
+
+  """
+  Get approved explanations for a question (public view).
+  Sorted by quality score.
+  """
+  approvedExplanations(questionId: UUID!, languageCode: String!): [Explanation!]!
+
+  """
+  Get current user's explanation submissions
+  """
+  mySubmissions: [Explanation!]!
+
+  """
+  Get moderation queue (pending and flagged explanations).
+  Requires PRIEST, THEOLOGY_REVIEWER, or ADMIN role.
+  """
+  moderationQueue: [Explanation!]!
+
+  """
+  Get reviews for an explanation
+  """
+  reviewsForExplanation(explanationId: UUID!): [ExplanationReview!]!
+
+  """
+  Get average scores for an explanation
+  """
+  explanationScores(explanationId: UUID!): ExplanationScores!
+
+  """
+  Get review consensus for an explanation
+  """
+  reviewConsensus(explanationId: UUID!): ReviewConsensus!
+
+  """
+  Get flags for an explanation
+  """
+  flagsForExplanation(explanationId: UUID!): [ExplanationFlag!]!
+
+  """
+  Get all open flags (moderation view).
+  Requires PRIEST, THEOLOGY_REVIEWER, or ADMIN role.
+  """
+  openFlags: [ExplanationFlag!]!
+
+  """
+  Get user's vote on an explanation (if any)
+  """
+  myVote(explanationId: UUID!): ExplanationVote
+
+  """
+  Get vote statistics for an explanation
+  """
+  voteStatistics(explanationId: UUID!): VoteStatistics!
+
+  """
+  Get top voted explanations for a question
+  """
+  topVotedExplanations(questionId: UUID!, limit: Int = 5): [Explanation!]!
 }
 
 """
@@ -178,6 +255,64 @@ type Mutation {
   Requires ADMIN role.
   """
   linkQuestionToBible(questionId: UUID!, bibleReferenceId: UUID!, order: Int = 0): Question!
+
+  # =====================================================
+  # Phase 2: Explanation System Mutations
+  # =====================================================
+
+  """
+  Submit a text explanation for a question.
+  Available to all authenticated users.
+  """
+  submitTextExplanation(input: SubmitTextExplanationInput!): Explanation!
+
+  """
+  Submit an audio or video explanation for a question.
+  File must be uploaded first using the file upload endpoint.
+  Available to all authenticated users.
+  """
+  submitFileExplanation(input: SubmitFileExplanationInput!): Explanation!
+
+  """
+  Review an explanation (approve, reject, or request revision).
+  Requires PRIEST, THEOLOGY_REVIEWER, or ADMIN role.
+  """
+  reviewExplanation(input: ReviewExplanationInput!): ExplanationReview!
+
+  """
+  Flag an explanation for inappropriate content.
+  Available to all authenticated users.
+  """
+  flagExplanation(input: FlagExplanationInput!): ExplanationFlag!
+
+  """
+  Resolve a flag (mark as resolved or dismissed).
+  Requires PRIEST, THEOLOGY_REVIEWER, or ADMIN role.
+  """
+  resolveFlag(input: ResolveFlagInput!): ExplanationFlag!
+
+  """
+  Vote on an explanation (helpful or not helpful).
+  Available to all authenticated users.
+  One vote per user per explanation.
+  """
+  voteOnExplanation(input: VoteOnExplanationInput!): ExplanationVote!
+
+  """
+  Update an existing vote
+  """
+  updateVote(input: UpdateVoteInput!): ExplanationVote!
+
+  """
+  Remove a vote
+  """
+  removeVote(explanationId: UUID!): Boolean!
+
+  """
+  Delete an explanation (admin only).
+  Requires ADMIN role.
+  """
+  deleteExplanation(id: UUID!): Boolean!
 }
 
 """
@@ -310,6 +445,203 @@ enum UserRole {
   ADMIN
 }
 
+# =====================================================
+# Phase 2: Explanation System Types
+# =====================================================
+
+"""
+User-submitted explanation for a catechism question.
+Can be text, audio, or video format.
+"""
+type Explanation {
+  id: UUID!
+  question: Question!
+  submitter: User!
+  languageCode: String!
+  contentType: ExplanationContentType!
+  textContent: String
+  fileUrl: String
+  fileSizeBytes: Long
+  fileMimeType: String
+  durationSeconds: Int
+  submissionStatus: ExplanationStatus!
+  qualityScore: Int
+  viewCount: Int!
+  helpfulCount: Int!
+  submittedAt: DateTime!
+  reviewedAt: DateTime
+  approvedAt: DateTime
+  reviews: [ExplanationReview!]!
+  flags: [ExplanationFlag!]!
+  votes: [ExplanationVote!]!
+  voteStatistics: VoteStatistics!
+  flagStatistics: FlagStatistics!
+}
+
+enum ExplanationContentType {
+  TEXT
+  AUDIO
+  VIDEO
+}
+
+enum ExplanationStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  FLAGGED
+}
+
+"""
+Moderator review of an explanation
+"""
+type ExplanationReview {
+  id: UUID!
+  explanation: Explanation!
+  reviewer: User!
+  reviewStatus: ReviewStatus!
+  reviewComments: String
+  qualityRating: Int
+  accuracyScore: Int
+  clarityScore: Int
+  theologicalSoundnessScore: Int
+  reviewedAt: DateTime!
+}
+
+enum ReviewStatus {
+  APPROVED
+  REJECTED
+  NEEDS_REVISION
+}
+
+"""
+Community flag on an explanation
+"""
+type ExplanationFlag {
+  id: UUID!
+  explanation: Explanation!
+  flagger: User!
+  flagReason: FlagReason!
+  flagDetails: String
+  flagStatus: FlagStatus!
+  moderator: User
+  moderatorNotes: String
+  resolvedAt: DateTime
+  createdAt: DateTime!
+}
+
+enum FlagReason {
+  INACCURATE
+  INAPPROPRIATE
+  MISLEADING
+  POOR_QUALITY
+  DUPLICATE
+  OFF_TOPIC
+  OTHER
+}
+
+enum FlagStatus {
+  OPEN
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+"""
+User vote on explanation helpfulness
+"""
+type ExplanationVote {
+  id: UUID!
+  explanation: Explanation!
+  user: User!
+  isHelpful: Boolean!
+  voteComment: String
+  createdAt: DateTime!
+}
+
+"""
+Uploaded file metadata
+"""
+type FileUpload {
+  id: UUID!
+  uploader: User!
+  fileName: String!
+  filePath: String!
+  fileSizeBytes: Long!
+  mimeType: String!
+  uploadType: FileUploadType!
+  processingStatus: ProcessingStatus!
+  virusScanStatus: VirusScanStatus!
+  isPublic: Boolean!
+  accessCount: Int!
+  uploadedAt: DateTime!
+}
+
+enum FileUploadType {
+  AUDIO
+  VIDEO
+  IMAGE
+  DOCUMENT
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum VirusScanStatus {
+  PENDING
+  CLEAN
+  INFECTED
+  FAILED
+}
+
+"""
+Vote statistics for an explanation
+"""
+type VoteStatistics {
+  totalVotes: Int!
+  helpfulVotes: Int!
+  unhelpfulVotes: Int!
+  helpfulPercentage: Float!
+}
+
+"""
+Flag statistics for an explanation
+"""
+type FlagStatistics {
+  totalFlags: Int!
+  openFlags: Int!
+  resolvedFlags: Int!
+  dismissedFlags: Int!
+}
+
+"""
+Average review scores for an explanation
+"""
+type ExplanationScores {
+  reviewCount: Int!
+  avgQuality: Float
+  avgAccuracy: Float
+  avgClarity: Float
+  avgTheological: Float
+}
+
+"""
+Review consensus information
+"""
+type ReviewConsensus {
+  hasConsensus: Boolean!
+  consensusStatus: ReviewStatus
+  approvalCount: Int!
+  rejectionCount: Int!
+  revisionCount: Int!
+}
+
+scalar Long
+
 type AuthPayload {
   token: String!
   user: User!
@@ -396,4 +728,76 @@ input CreateBibleReferenceInput {
   translation: String = "RSV-CE"
   language: String = "en"
   verseText: String!
+}
+
+# =====================================================
+# Phase 2: Explanation System Input Types
+# =====================================================
+
+"""
+Input for submitting a text explanation
+"""
+input SubmitTextExplanationInput {
+  questionId: UUID!
+  languageCode: String = "en"
+  textContent: String!
+}
+
+"""
+Input for submitting an audio or video explanation
+"""
+input SubmitFileExplanationInput {
+  questionId: UUID!
+  languageCode: String = "en"
+  contentType: ExplanationContentType!
+  fileId: UUID!
+}
+
+"""
+Input for reviewing an explanation
+"""
+input ReviewExplanationInput {
+  explanationId: UUID!
+  reviewStatus: ReviewStatus!
+  reviewComments: String
+  qualityRating: Int
+  accuracyScore: Int
+  clarityScore: Int
+  theologicalSoundnessScore: Int
+}
+
+"""
+Input for flagging an explanation
+"""
+input FlagExplanationInput {
+  explanationId: UUID!
+  flagReason: FlagReason!
+  flagDetails: String
+}
+
+"""
+Input for resolving a flag
+"""
+input ResolveFlagInput {
+  flagId: UUID!
+  resolution: FlagStatus!
+  moderatorNotes: String!
+}
+
+"""
+Input for voting on an explanation
+"""
+input VoteOnExplanationInput {
+  explanationId: UUID!
+  isHelpful: Boolean!
+  voteComment: String
+}
+
+"""
+Input for updating a vote
+"""
+input UpdateVoteInput {
+  explanationId: UUID!
+  isHelpful: Boolean!
+  voteComment: String
 }
