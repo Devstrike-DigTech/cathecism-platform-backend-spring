@@ -1,0 +1,399 @@
+scalar UUID
+scalar DateTime
+
+"""
+Root query type - all read operations start here
+"""
+type Query {
+  """
+  Get a single question by ID with its translation in the specified language.
+  Falls back to the booklet's default language, then English if translation not available.
+  """
+  question(id: UUID!, language: String = "en"): Question
+
+  """
+  Get all questions in a booklet, filtered by language.
+  Returns questions ordered by question number.
+  """
+  questions(bookletId: UUID!, language: String = "en"): [Question!]!
+
+  """
+  Get all questions within a specific subtitle.
+  Useful for displaying questions grouped by topic.
+  """
+  questionsBySubtitle(subtitleId: UUID!, language: String = "en"): [Question!]!
+
+  """
+  Get a CCC (Catechism of the Catholic Church) paragraph by its number.
+  Example: cccParagraph(number: 355, language: "en")
+  """
+  cccParagraph(number: Int!, language: String = "en"): CCCParagraph
+
+  """
+  Get a Bible reference by its unique ID
+  """
+  bibleReferenceById(id: UUID!, language: String = "en"): BibleReference
+
+  """
+  Get all catechism booklets
+  """
+  booklets: [CatechismBooklet!]!
+
+  """
+  Get a single booklet by ID
+  """
+  booklet(id: UUID!): CatechismBooklet
+
+  """
+  Get all Acts (major sections) in a booklet, ordered by display order.
+  Example Acts: "The Creed", "The Sacraments", "The Commandments"
+  """
+  acts(bookletId: UUID!, language: String = "en"): [Act!]!
+
+  """
+  Get a single Act by ID
+  """
+  act(id: UUID!, language: String = "en"): Act
+
+  """
+  Get all Subtitles (sub-sections) within an Act, ordered by display order.
+  Example Subtitles: "God the Father", "Jesus Christ", "The Holy Spirit"
+  """
+  subtitles(actId: UUID!, language: String = "en"): [Subtitle!]!
+
+  """
+  Get a single Subtitle by ID
+  """
+  subtitle(id: UUID!, language: String = "en"): Subtitle
+
+  """
+  Get the currently authenticated user
+  """
+  me: User
+}
+
+"""
+Root mutation type - all write operations start here
+"""
+type Mutation {
+  """
+  Authenticate a user with email and password.
+  Returns a JWT token for use in subsequent requests.
+  """
+  login(email: String!, password: String!): AuthPayload!
+
+  """
+  Register a new user account
+  """
+  register(input: RegisterInput!): AuthPayload!
+
+  """
+  Create a new catechism booklet.
+  Requires ADMIN role.
+  """
+  createBooklet(input: CreateBookletInput!): CatechismBooklet!
+
+  """
+  Create a new question with its translation.
+  Can optionally link to a subtitle for categorization.
+  Requires ADMIN role.
+  """
+  createQuestion(input: CreateQuestionInput!): Question!
+
+  """
+  Update an existing question's metadata (category, subtitle) or translation.
+  Requires ADMIN role.
+  """
+  updateQuestion(id: UUID!, input: UpdateQuestionInput!): Question!
+
+  """
+  Delete a question. This will also remove all links to CCC and Bible references.
+  Requires ADMIN role.
+  """
+  deleteQuestion(id: UUID!): Boolean!
+
+  """
+  Create a new Act (major section) with its title and description.
+  Example: Act 1 - "The Creed"
+  Requires ADMIN role.
+  """
+  createAct(input: CreateActInput!): Act!
+
+  """
+  Update an Act's display order or translations.
+  Requires ADMIN role.
+  """
+  updateAct(id: UUID!, input: UpdateActInput!): Act!
+
+  """
+  Delete an Act. This will cascade delete all subtitles under it.
+  Questions linked to those subtitles will become unlinked (not deleted).
+  Requires ADMIN role.
+  """
+  deleteAct(id: UUID!): Boolean!
+
+  """
+  Create a new Subtitle (sub-section) within an Act.
+  Example: Subtitle 1 - "God the Father Almighty"
+  Requires ADMIN role.
+  """
+  createSubtitle(input: CreateSubtitleInput!): Subtitle!
+
+  """
+  Update a Subtitle's display order or translations.
+  Requires ADMIN role.
+  """
+  updateSubtitle(id: UUID!, input: UpdateSubtitleInput!): Subtitle!
+
+  """
+  Delete a Subtitle. Questions linked to it will become unlinked (not deleted).
+  Requires ADMIN role.
+  """
+  deleteSubtitle(id: UUID!): Boolean!
+
+  """
+  Add a CCC (Catechism of the Catholic Church) paragraph with its text.
+  If the paragraph number already exists, this adds a translation in the specified language.
+  Requires ADMIN role.
+  """
+  addCCCParagraph(input: CreateCCCParagraphInput!): CCCParagraph!
+
+  """
+  Add a Bible reference (verse or passage) with its text.
+  If the reference already exists, this adds a translation in the specified language.
+  Requires ADMIN role.
+  """
+  addBibleReference(input: CreateBibleReferenceInput!): BibleReference!
+
+  """
+  Link a question to a CCC paragraph.
+  The 'order' parameter determines the sequence of multiple references.
+  Requires ADMIN role.
+  """
+  linkQuestionToCCC(questionId: UUID!, cccParagraphNumber: Int!, order: Int = 0): Question!
+
+  """
+  Link a question to a Bible reference.
+  The 'order' parameter determines the sequence of multiple references.
+  Requires ADMIN role.
+  """
+  linkQuestionToBible(questionId: UUID!, bibleReferenceId: UUID!, order: Int = 0): Question!
+}
+
+"""
+A catechism booklet containing Acts, Subtitles, and Questions.
+Examples: Baltimore Catechism, Penny Catechism, etc.
+"""
+type CatechismBooklet {
+  id: UUID!
+  """Name of the booklet"""
+  name: String!
+  """Diocese that owns or uses this booklet"""
+  diocese: String
+  """Version number (e.g., "1.0", "2nd Edition")"""
+  version: String!
+  """Default language for this booklet (ISO 639-1 code)"""
+  languageDefault: String!
+  """All questions in this booklet"""
+  questions(language: String = "en"): [Question!]!
+  """When this booklet was created"""
+  createdAt: DateTime!
+}
+
+"""
+A catechism question with its answer.
+Questions can be categorized under Subtitles and linked to CCC paragraphs and Bible verses.
+"""
+type Question {
+  id: UUID!
+  """Question number within the booklet (e.g., 1, 2, 3...)"""
+  number: Int!
+  """The question text in the requested language"""
+  text: String!
+  """The answer text in the requested language"""
+  answer: String!
+  """Optional category tag (e.g., "Creation", "Trinity", "Salvation")"""
+  category: String
+  """The booklet this question belongs to"""
+  booklet: CatechismBooklet!
+  """The subtitle (sub-section) this question is categorized under"""
+  subtitle: Subtitle
+  """The Act (major section) this question belongs to (via subtitle)"""
+  act: Act
+  """CCC paragraphs referenced by this question"""
+  cccReferences: [CCCParagraph!]!
+  """Bible verses referenced by this question"""
+  bibleReferences: [BibleReference!]!
+  """Whether this translation is official or community-contributed"""
+  translationOfficial: Boolean!
+  """List of languages this question is available in"""
+  availableLanguages: [String!]!
+}
+
+"""
+An Act represents a major section in a catechism.
+Examples: "The Creed", "The Sacraments", "The Commandments", "Prayer"
+"""
+type Act {
+  id: UUID!
+  """Act number (e.g., 1, 2, 3...)"""
+  actNumber: Int!
+  """Title of the act in the requested language"""
+  title: String!
+  """Optional description of what this act covers"""
+  description: String
+  """Order in which this act should be displayed"""
+  displayOrder: Int!
+  """The booklet this act belongs to"""
+  booklet: CatechismBooklet!
+  """Sub-sections within this act"""
+  subtitles(language: String = "en"): [Subtitle!]!
+  """List of languages this act is available in"""
+  availableLanguages: [String!]!
+}
+
+"""
+A Subtitle represents a sub-section within an Act.
+Examples: "God the Father", "Jesus Christ", "The Holy Spirit"
+"""
+type Subtitle {
+  id: UUID!
+  """Subtitle number within the act (e.g., 1, 2, 3...)"""
+  subtitleNumber: Int!
+  """Title of the subtitle in the requested language"""
+  title: String!
+  """Optional description"""
+  description: String
+  """Order in which this subtitle should be displayed"""
+  displayOrder: Int!
+  """The act this subtitle belongs to"""
+  act: Act!
+  """Questions categorized under this subtitle"""
+  questions(language: String = "en"): [Question!]!
+  """List of languages this subtitle is available in"""
+  availableLanguages: [String!]!
+}
+
+type CCCParagraph {
+  id: UUID!
+  paragraphNumber: Int!
+  text: String!
+  edition: String!
+  licensed: Boolean!
+}
+
+type BibleReference {
+  id: UUID!
+  reference: String!  # "Genesis 1:27" or "Genesis 1:27-28"
+  text: String!
+  book: String!
+  chapter: Int!
+  verseStart: Int!
+  verseEnd: Int
+  translation: String!
+}
+
+type User {
+  id: UUID!
+  email: String!
+  name: String!
+  role: UserRole!
+  verified: Boolean!
+  diocese: String
+}
+
+enum UserRole {
+  PUBLIC_USER
+  CATECHIST
+  PRIEST
+  THEOLOGY_REVIEWER
+  ADMIN
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+input RegisterInput {
+  email: String!
+  password: String!
+  name: String!
+  diocese: String
+}
+
+input CreateBookletInput {
+  name: String!
+  diocese: String
+  version: String!
+  languageDefault: String = "en"
+}
+
+input CreateQuestionInput {
+  bookletId: UUID!
+  subtitleId: UUID
+  questionNumber: Int!
+  category: String
+  language: String = "en"
+  questionText: String!
+  answerText: String!
+  isOfficial: Boolean = true
+}
+
+input UpdateQuestionInput {
+  subtitleId: UUID
+  category: String
+  language: String = "en"
+  questionText: String
+  answerText: String
+}
+
+input CreateActInput {
+  bookletId: UUID!
+  actNumber: Int!
+  displayOrder: Int = 0
+  language: String = "en"
+  title: String!
+  description: String
+}
+
+input UpdateActInput {
+  displayOrder: Int
+  language: String = "en"
+  title: String
+  description: String
+}
+
+input CreateSubtitleInput {
+  actId: UUID!
+  subtitleNumber: Int!
+  displayOrder: Int = 0
+  language: String = "en"
+  title: String!
+  description: String
+}
+
+input UpdateSubtitleInput {
+  displayOrder: Int
+  language: String = "en"
+  title: String
+  description: String
+}
+
+input CreateCCCParagraphInput {
+  paragraphNumber: Int!
+  edition: String = "2nd Edition"
+  language: String = "en"
+  paragraphText: String!
+  licensed: Boolean = false
+}
+
+input CreateBibleReferenceInput {
+  book: String!
+  chapter: Int!
+  verseStart: Int!
+  verseEnd: Int
+  translation: String = "RSV-CE"
+  language: String = "en"
+  verseText: String!
+}
