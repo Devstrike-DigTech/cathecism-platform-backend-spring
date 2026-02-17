@@ -1,5 +1,6 @@
 scalar UUID
 scalar DateTime
+scalar Long
 
 """
 Root query type - all read operations start here
@@ -10,76 +11,76 @@ type Query {
   Falls back to the booklet's default language, then English if translation not available.
   """
   question(id: UUID!, language: String = "en"): Question
-
+  
   """
   Get all questions in a booklet, filtered by language.
   Returns questions ordered by question number.
   """
   questions(bookletId: UUID!, language: String = "en"): [Question!]!
-
+  
   """
   Get all questions within a specific subtitle.
   Useful for displaying questions grouped by topic.
   """
   questionsBySubtitle(subtitleId: UUID!, language: String = "en"): [Question!]!
-
+  
   """
   Get a CCC (Catechism of the Catholic Church) paragraph by its number.
   Example: cccParagraph(number: 355, language: "en")
   """
   cccParagraph(number: Int!, language: String = "en"): CCCParagraph
-
+  
   """
   Get a Bible reference by its unique ID
   """
   bibleReferenceById(id: UUID!, language: String = "en"): BibleReference
-
+  
   """
   Get all catechism booklets
   """
   booklets: [CatechismBooklet!]!
-
+  
   """
   Get a single booklet by ID
   """
   booklet(id: UUID!): CatechismBooklet
-
+  
   """
   Get all Acts (major sections) in a booklet, ordered by display order.
   Example Acts: "The Creed", "The Sacraments", "The Commandments"
   """
   acts(bookletId: UUID!, language: String = "en"): [Act!]!
-
+  
   """
   Get a single Act by ID
   """
   act(id: UUID!, language: String = "en"): Act
-
+  
   """
   Get all Subtitles (sub-sections) within an Act, ordered by display order.
   Example Subtitles: "God the Father", "Jesus Christ", "The Holy Spirit"
   """
   subtitles(actId: UUID!, language: String = "en"): [Subtitle!]!
-
+  
   """
   Get a single Subtitle by ID
   """
   subtitle(id: UUID!, language: String = "en"): Subtitle
-
+  
   """
   Get the currently authenticated user
   """
   me: User
-
+  
   # =====================================================
   # Phase 2: Explanation System Queries
   # =====================================================
-
+  
   """
   Get a single explanation by ID
   """
   explanation(id: UUID!): Explanation
-
+  
   """
   Get explanations for a specific question.
   Can filter by status and language.
@@ -89,60 +90,60 @@ type Query {
     status: ExplanationStatus
     languageCode: String
   ): [Explanation!]!
-
+  
   """
   Get approved explanations for a question (public view).
   Sorted by quality score.
   """
   approvedExplanations(questionId: UUID!, languageCode: String!): [Explanation!]!
-
+  
   """
   Get current user's explanation submissions
   """
   mySubmissions: [Explanation!]!
-
+  
   """
   Get moderation queue (pending and flagged explanations).
   Requires PRIEST, THEOLOGY_REVIEWER, or ADMIN role.
   """
   moderationQueue: [Explanation!]!
-
+  
   """
   Get reviews for an explanation
   """
   reviewsForExplanation(explanationId: UUID!): [ExplanationReview!]!
-
+  
   """
   Get average scores for an explanation
   """
   explanationScores(explanationId: UUID!): ExplanationScores!
-
+  
   """
   Get review consensus for an explanation
   """
   reviewConsensus(explanationId: UUID!): ReviewConsensus!
-
+  
   """
   Get flags for an explanation
   """
   flagsForExplanation(explanationId: UUID!): [ExplanationFlag!]!
-
+  
   """
   Get all open flags (moderation view).
   Requires PRIEST, THEOLOGY_REVIEWER, or ADMIN role.
   """
   openFlags: [ExplanationFlag!]!
-
+  
   """
   Get user's vote on an explanation (if any)
   """
   myVote(explanationId: UUID!): ExplanationVote
-
+  
   """
   Get vote statistics for an explanation
   """
   voteStatistics(explanationId: UUID!): VoteStatistics!
-
+  
   """
   Get top voted explanations for a question
   """
@@ -158,156 +159,156 @@ type Mutation {
   Returns a JWT token for use in subsequent requests.
   """
   login(email: String!, password: String!): AuthPayload!
-
+  
   """
   Register a new user account
   """
   register(input: RegisterInput!): AuthPayload!
-
+  
   """
   Create a new catechism booklet.
   Requires ADMIN role.
   """
   createBooklet(input: CreateBookletInput!): CatechismBooklet!
-
+  
   """
   Create a new question with its translation.
   Can optionally link to a subtitle for categorization.
   Requires ADMIN role.
   """
   createQuestion(input: CreateQuestionInput!): Question!
-
+  
   """
   Update an existing question's metadata (category, subtitle) or translation.
   Requires ADMIN role.
   """
   updateQuestion(id: UUID!, input: UpdateQuestionInput!): Question!
-
+  
   """
   Delete a question. This will also remove all links to CCC and Bible references.
   Requires ADMIN role.
   """
   deleteQuestion(id: UUID!): Boolean!
-
+  
   """
   Create a new Act (major section) with its title and description.
   Example: Act 1 - "The Creed"
   Requires ADMIN role.
   """
   createAct(input: CreateActInput!): Act!
-
+  
   """
   Update an Act's display order or translations.
   Requires ADMIN role.
   """
   updateAct(id: UUID!, input: UpdateActInput!): Act!
-
+  
   """
   Delete an Act. This will cascade delete all subtitles under it.
   Questions linked to those subtitles will become unlinked (not deleted).
   Requires ADMIN role.
   """
   deleteAct(id: UUID!): Boolean!
-
+  
   """
   Create a new Subtitle (sub-section) within an Act.
   Example: Subtitle 1 - "God the Father Almighty"
   Requires ADMIN role.
   """
   createSubtitle(input: CreateSubtitleInput!): Subtitle!
-
+  
   """
   Update a Subtitle's display order or translations.
   Requires ADMIN role.
   """
   updateSubtitle(id: UUID!, input: UpdateSubtitleInput!): Subtitle!
-
+  
   """
   Delete a Subtitle. Questions linked to it will become unlinked (not deleted).
   Requires ADMIN role.
   """
   deleteSubtitle(id: UUID!): Boolean!
-
+  
   """
   Add a CCC (Catechism of the Catholic Church) paragraph with its text.
   If the paragraph number already exists, this adds a translation in the specified language.
   Requires ADMIN role.
   """
   addCCCParagraph(input: CreateCCCParagraphInput!): CCCParagraph!
-
+  
   """
   Add a Bible reference (verse or passage) with its text.
   If the reference already exists, this adds a translation in the specified language.
   Requires ADMIN role.
   """
   addBibleReference(input: CreateBibleReferenceInput!): BibleReference!
-
+  
   """
   Link a question to a CCC paragraph.
   The 'order' parameter determines the sequence of multiple references.
   Requires ADMIN role.
   """
   linkQuestionToCCC(questionId: UUID!, cccParagraphNumber: Int!, order: Int = 0): Question!
-
+  
   """
   Link a question to a Bible reference.
   The 'order' parameter determines the sequence of multiple references.
   Requires ADMIN role.
   """
   linkQuestionToBible(questionId: UUID!, bibleReferenceId: UUID!, order: Int = 0): Question!
-
+  
   # =====================================================
   # Phase 2: Explanation System Mutations
   # =====================================================
-
+  
   """
   Submit a text explanation for a question.
   Available to all authenticated users.
   """
   submitTextExplanation(input: SubmitTextExplanationInput!): Explanation!
-
+  
   """
   Submit an audio or video explanation for a question.
   File must be uploaded first using the file upload endpoint.
   Available to all authenticated users.
   """
   submitFileExplanation(input: SubmitFileExplanationInput!): Explanation!
-
+  
   """
   Review an explanation (approve, reject, or request revision).
   Requires PRIEST, THEOLOGY_REVIEWER, or ADMIN role.
   """
   reviewExplanation(input: ReviewExplanationInput!): ExplanationReview!
-
+  
   """
   Flag an explanation for inappropriate content.
   Available to all authenticated users.
   """
   flagExplanation(input: FlagExplanationInput!): ExplanationFlag!
-
+  
   """
   Resolve a flag (mark as resolved or dismissed).
   Requires PRIEST, THEOLOGY_REVIEWER, or ADMIN role.
   """
   resolveFlag(input: ResolveFlagInput!): ExplanationFlag!
-
+  
   """
   Vote on an explanation (helpful or not helpful).
   Available to all authenticated users.
   One vote per user per explanation.
   """
   voteOnExplanation(input: VoteOnExplanationInput!): ExplanationVote!
-
+  
   """
   Update an existing vote
   """
   updateVote(input: UpdateVoteInput!): ExplanationVote!
-
+  
   """
   Remove a vote
   """
   removeVote(explanationId: UUID!): Boolean!
-
+  
   """
   Delete an explanation (admin only).
   Requires ADMIN role.
@@ -640,7 +641,7 @@ type ReviewConsensus {
   revisionCount: Int!
 }
 
-scalar Long
+
 
 type AuthPayload {
   token: String!
