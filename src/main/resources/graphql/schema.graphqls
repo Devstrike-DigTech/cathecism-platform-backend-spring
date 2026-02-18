@@ -2,579 +2,1015 @@ scalar UUID
 scalar DateTime
 scalar Long
 
+# =====================================================
+# ROOT TYPES
+# =====================================================
+
 """
-Root query type - all read operations start here
+Root query type — all read operations start here.
+Public queries require no authentication.
+Queries marked with role requirements need a Bearer token.
 """
 type Query {
+
+  # ---------------------------------------------------
+  # BOOKLETS
+  # ---------------------------------------------------
+
   """
-  Get a single question by ID with its translation in the specified language.
-  Falls back to the booklet's default language, then English if translation not available.
-  """
-  question(id: UUID!, language: String = "en"): Question
-  
-  """
-  Get all questions in a booklet, filtered by language.
-  Returns questions ordered by question number.
-  """
-  questions(bookletId: UUID!, language: String = "en"): [Question!]!
-  
-  """
-  Get all questions within a specific subtitle.
-  Useful for displaying questions grouped by topic.
-  """
-  questionsBySubtitle(subtitleId: UUID!, language: String = "en"): [Question!]!
-  
-  """
-  Get a CCC (Catechism of the Catholic Church) paragraph by its number.
-  Example: cccParagraph(number: 355, language: "en")
-  """
-  cccParagraph(number: Int!, language: String = "en"): CCCParagraph
-  
-  """
-  Get a Bible reference by its unique ID
-  """
-  bibleReferenceById(id: UUID!, language: String = "en"): BibleReference
-  
-  """
-  Get all catechism booklets
+  Get all catechism booklets available on the platform.
   """
   booklets: [CatechismBooklet!]!
-  
+
   """
-  Get a single booklet by ID
+  Get a single booklet by its ID.
   """
   booklet(id: UUID!): CatechismBooklet
-  
+
+  # ---------------------------------------------------
+  # STRUCTURE: ACTS & SUBTITLES
+  # ---------------------------------------------------
+
   """
   Get all Acts (major sections) in a booklet, ordered by display order.
-  Example Acts: "The Creed", "The Sacraments", "The Commandments"
+  Example Acts: "The Creed", "The Sacraments", "The Commandments", "Prayer"
   """
   acts(bookletId: UUID!, language: String = "en"): [Act!]!
-  
+
   """
-  Get a single Act by ID
+  Get a single Act by ID.
   """
   act(id: UUID!, language: String = "en"): Act
-  
+
   """
   Get all Subtitles (sub-sections) within an Act, ordered by display order.
   Example Subtitles: "God the Father", "Jesus Christ", "The Holy Spirit"
   """
   subtitles(actId: UUID!, language: String = "en"): [Subtitle!]!
-  
+
   """
-  Get a single Subtitle by ID
+  Get a single Subtitle by ID.
   """
   subtitle(id: UUID!, language: String = "en"): Subtitle
-  
+
+  # ---------------------------------------------------
+  # QUESTIONS
+  # ---------------------------------------------------
+
   """
-  Get the currently authenticated user
+  Get a single question by ID with its translation in the specified language.
+  Falls back to the booklet's default language, then English if the requested
+  translation is not available.
+  """
+  question(id: UUID!, language: String = "en"): Question
+
+  """
+  Get all questions in a booklet, ordered by question number.
+  """
+  questions(bookletId: UUID!, language: String = "en"): [Question!]!
+
+  """
+  Get all questions within a specific subtitle.
+  Useful for displaying questions grouped by topic.
+  """
+  questionsBySubtitle(subtitleId: UUID!, language: String = "en"): [Question!]!
+
+  # ---------------------------------------------------
+  # CCC & BIBLE REFERENCES
+  # ---------------------------------------------------
+
+  """
+  Get a CCC (Catechism of the Catholic Church) paragraph by its number.
+  Example: cccParagraph(number: 355, language: "en")
+  """
+  cccParagraph(number: Int!, language: String = "en"): CCCParagraph
+
+  """
+  Get a Bible reference by its unique ID.
+  """
+  bibleReferenceById(id: UUID!, language: String = "en"): BibleReference
+
+  # ---------------------------------------------------
+  # AUTHENTICATION
+  # ---------------------------------------------------
+
+  """
+  Get the currently authenticated user.
+  Requires a valid Bearer token.
   """
   me: User
-  
-  # =====================================================
-  # Phase 2: Explanation System Queries
-  # =====================================================
-  
+
+  # ---------------------------------------------------
+  # EXPLANATIONS (Phase 2)
+  # ---------------------------------------------------
+
   """
-  Get a single explanation by ID
+  Get a single explanation by ID.
   """
   explanation(id: UUID!): Explanation
-  
+
   """
-  Get explanations for a specific question.
-  Can filter by status and language.
+  Get all explanations for a specific question.
+  Optionally filter by submission status and/or language code.
   """
   explanationsForQuestion(
     questionId: UUID!
     status: ExplanationStatus
     languageCode: String
   ): [Explanation!]!
-  
+
   """
-  Get approved explanations for a question (public view).
-  Sorted by quality score.
+  Get approved explanations for a question, sorted by quality score descending.
+  This is the public-facing view of explanations.
   """
   approvedExplanations(questionId: UUID!, languageCode: String!): [Explanation!]!
-  
+
   """
-  Get current user's explanation submissions
+  Get the current user's own explanation submissions, newest first.
+  Requires authentication.
   """
   mySubmissions: [Explanation!]!
-  
+
   """
-  Get moderation queue (pending and flagged explanations).
+  Get the moderation queue: all PENDING, UNDER_REVIEW, and FLAGGED explanations,
+  prioritised in that order, oldest first within each group.
   Requires PRIEST, THEOLOGY_REVIEWER, or ADMIN role.
   """
   moderationQueue: [Explanation!]!
-  
+
   """
-  Get reviews for an explanation
+  Get all reviews submitted for a specific explanation.
   """
   reviewsForExplanation(explanationId: UUID!): [ExplanationReview!]!
-  
+
   """
-  Get average scores for an explanation
+  Get the average review scores (quality, accuracy, clarity, theological soundness)
+  for a specific explanation.
   """
   explanationScores(explanationId: UUID!): ExplanationScores!
-  
+
   """
-  Get review consensus for an explanation
+  Get the review consensus for an explanation — whether reviewers have reached
+  a majority decision to approve or reject.
   """
   reviewConsensus(explanationId: UUID!): ReviewConsensus!
-  
+
   """
-  Get flags for an explanation
+  Get all flags raised against a specific explanation.
   """
   flagsForExplanation(explanationId: UUID!): [ExplanationFlag!]!
-  
+
   """
-  Get all open flags (moderation view).
+  Get all currently open (unresolved) flags across the platform.
   Requires PRIEST, THEOLOGY_REVIEWER, or ADMIN role.
   """
   openFlags: [ExplanationFlag!]!
-  
+
   """
-  Get user's vote on an explanation (if any)
+  Get the current user's vote on a specific explanation, if one exists.
+  Requires authentication.
   """
   myVote(explanationId: UUID!): ExplanationVote
-  
+
   """
-  Get vote statistics for an explanation
+  Get aggregate vote statistics (total, helpful, unhelpful, percentage) for an explanation.
   """
   voteStatistics(explanationId: UUID!): VoteStatistics!
-  
+
   """
-  Get top voted explanations for a question
+  Get the top-voted approved explanations for a question, sorted by quality score.
+  Defaults to top 5.
   """
   topVotedExplanations(questionId: UUID!, limit: Int = 5): [Explanation!]!
+
+  # ---------------------------------------------------
+  # COMMUNITY (Phase 3)
+  # ---------------------------------------------------
+
+  """
+  Get the current user's full community profile including badges, achievements,
+  activity history and stats. Created automatically on first access.
+  Requires authentication.
+  """
+  myProfile: UserProfile!
+
+  """
+  Get a user's public community profile by their user ID.
+  Returns null if the profile is set to private and the requester is not the owner.
+  """
+  userProfile(userId: UUID!): UserProfile
+
+  """
+  Get the leaderboard for the given period type (WEEKLY, MONTHLY, ALL_TIME).
+  Returns up to `limit` entries ordered by rank. Default limit is 20.
+  Leaderboard is rebuilt by admins via rebuildLeaderboard mutation.
+  """
+  leaderboard(type: LeaderboardType!, limit: Int = 20): [LeaderboardEntry!]!
+
+  """
+  Get the current user's rank entry for the given leaderboard type.
+  Returns null if the user has no activity in the current period.
+  Requires authentication.
+  """
+  myRank(type: LeaderboardType!): LeaderboardEntry
+
+  """
+  Get all active badge definitions available on the platform.
+  """
+  allBadges: [Badge!]!
+
+  """
+  Get all active achievement definitions with their unlock thresholds.
+  """
+  allAchievements: [Achievement!]!
+
+  # ---------------------------------------------------
+  # SEARCH (Phase 4 — Elasticsearch)
+  # ---------------------------------------------------
+
+  """
+  Full-text search over catechism questions and answers.
+  Supports fuzzy matching, catechism-specific synonyms (e.g. "god" also matches
+  "lord" and "almighty"), and faceted filtering by booklet, language, category,
+  CCC paragraph number, and Bible book.
+  Results are ranked by relevance score. No authentication required.
+  """
+  searchQuestions(input: SearchInput!): QuestionSearchResult!
+
+  """
+  Full-text search over approved explanation text content.
+  Audio and video explanations without transcripts are excluded from text matching
+  but appear in filter-only (blank query) searches.
+  No authentication required.
+  """
+  searchExplanations(input: SearchInput!): ExplanationSearchResult!
+
+  """
+  Autocomplete suggestions for the search box.
+  Returns up to `limit` question text completions that start with the given prefix.
+  Minimum prefix length is 2 characters; requests shorter than that return an empty list.
+  No authentication required.
+  """
+  searchSuggestions(prefix: String!, languageCode: String = "en", limit: Int = 5): [String!]!
+
+  # ---------------------------------------------------
+  # ANALYTICS (Phase 4 — Dashboard)
+  # ---------------------------------------------------
+
+  """
+  Get the top-level analytics dashboard summary.
+  Returns the most recent nightly snapshot enriched with today's live counts.
+  Requires ADMIN role.
+  """
+  dashboardSummary: DashboardSummary!
+
+  """
+  Get daily platform snapshots for trend charts.
+  Returns one entry per day for the past `days` days (default 30, max 365).
+  Requires ADMIN role.
+  """
+  explanationTrend(days: Int = 30): [DailySnapshot!]!
+
+  """
+  Get daily user registration and role snapshots for growth charts.
+  Returns one entry per day for the past `days` days (default 30, max 365).
+  Requires ADMIN role.
+  """
+  userGrowthTrend(days: Int = 30): [UserGrowthSnapshot!]!
+
+  """
+  Get daily moderation performance snapshots for queue and review-speed charts.
+  Returns one entry per day for the past `days` days (default 30, max 365).
+  Requires ADMIN role.
+  """
+  moderationTrend(days: Int = 30): [ModerationSnapshot!]!
+
+  """
+  Get the top `limit` approved explanations ranked by quality score.
+  Default limit is 10, maximum is 50.
+  Requires ADMIN role.
+  """
+  topExplanations(limit: Int = 10): [TopContentEntry!]!
+
+  """
+  Get a breakdown of all explanations by submission status, content type, and language.
+  Useful for distribution pie/bar charts on the dashboard.
+  Requires ADMIN role.
+  """
+  contentBreakdown: ContentBreakdown!
 }
 
 """
-Root mutation type - all write operations start here
+Root mutation type — all write operations start here.
+All mutations except login and register require a valid Bearer token.
 """
 type Mutation {
+
+  # ---------------------------------------------------
+  # AUTHENTICATION
+  # ---------------------------------------------------
+
   """
-  Authenticate a user with email and password.
-  Returns a JWT token for use in subsequent requests.
+  Authenticate with email and password.
+  Returns a signed JWT token valid for 24 hours and the authenticated user object.
   """
   login(email: String!, password: String!): AuthPayload!
-  
+
   """
-  Register a new user account
+  Register a new user account.
+  Returns a JWT token and the newly created user so the client can log in immediately.
   """
   register(input: RegisterInput!): AuthPayload!
-  
+
+  # ---------------------------------------------------
+  # BOOKLETS (Admin)
+  # ---------------------------------------------------
+
   """
   Create a new catechism booklet.
   Requires ADMIN role.
   """
   createBooklet(input: CreateBookletInput!): CatechismBooklet!
-  
+
+  # ---------------------------------------------------
+  # QUESTIONS (Admin)
+  # ---------------------------------------------------
+
   """
-  Create a new question with its translation.
-  Can optionally link to a subtitle for categorization.
+  Create a new question with its first translation.
+  Optionally link to a subtitle for categorisation.
   Requires ADMIN role.
   """
   createQuestion(input: CreateQuestionInput!): Question!
-  
+
   """
-  Update an existing question's metadata (category, subtitle) or translation.
+  Update an existing question's metadata (category, subtitle) or add/update a translation.
   Requires ADMIN role.
   """
   updateQuestion(id: UUID!, input: UpdateQuestionInput!): Question!
-  
+
   """
-  Delete a question. This will also remove all links to CCC and Bible references.
+  Delete a question and all its translations.
+  Also removes all links to CCC paragraphs and Bible references.
   Requires ADMIN role.
   """
   deleteQuestion(id: UUID!): Boolean!
-  
+
+  # ---------------------------------------------------
+  # ACTS (Admin)
+  # ---------------------------------------------------
+
   """
-  Create a new Act (major section) with its title and description.
-  Example: Act 1 - "The Creed"
+  Create a new Act (major section) with a title and optional description.
+  Example: Act 1 — "The Creed"
   Requires ADMIN role.
   """
   createAct(input: CreateActInput!): Act!
-  
+
   """
-  Update an Act's display order or translations.
+  Update an Act's display order or add/update a translation.
   Requires ADMIN role.
   """
   updateAct(id: UUID!, input: UpdateActInput!): Act!
-  
+
   """
-  Delete an Act. This will cascade delete all subtitles under it.
-  Questions linked to those subtitles will become unlinked (not deleted).
+  Delete an Act and all its subtitles.
+  Questions linked to those subtitles will become unlinked but are NOT deleted.
   Requires ADMIN role.
   """
   deleteAct(id: UUID!): Boolean!
-  
+
+  # ---------------------------------------------------
+  # SUBTITLES (Admin)
+  # ---------------------------------------------------
+
   """
   Create a new Subtitle (sub-section) within an Act.
-  Example: Subtitle 1 - "God the Father Almighty"
+  Example: Subtitle 1 — "God the Father Almighty"
   Requires ADMIN role.
   """
   createSubtitle(input: CreateSubtitleInput!): Subtitle!
-  
+
   """
-  Update a Subtitle's display order or translations.
+  Update a Subtitle's display order or add/update a translation.
   Requires ADMIN role.
   """
   updateSubtitle(id: UUID!, input: UpdateSubtitleInput!): Subtitle!
-  
+
   """
-  Delete a Subtitle. Questions linked to it will become unlinked (not deleted).
+  Delete a Subtitle.
+  Questions linked to it will become unlinked but are NOT deleted.
   Requires ADMIN role.
   """
   deleteSubtitle(id: UUID!): Boolean!
-  
+
+  # ---------------------------------------------------
+  # CCC & BIBLE REFERENCES (Admin)
+  # ---------------------------------------------------
+
   """
-  Add a CCC (Catechism of the Catholic Church) paragraph with its text.
-  If the paragraph number already exists, this adds a translation in the specified language.
+  Add a CCC paragraph with its text.
+  If the paragraph number already exists, this adds a new language translation.
   Requires ADMIN role.
   """
   addCCCParagraph(input: CreateCCCParagraphInput!): CCCParagraph!
-  
+
   """
-  Add a Bible reference (verse or passage) with its text.
-  If the reference already exists, this adds a translation in the specified language.
+  Add a Bible verse or passage with its text.
+  If the reference (book + chapter + verse + translation) already exists,
+  this adds a new language translation.
   Requires ADMIN role.
   """
   addBibleReference(input: CreateBibleReferenceInput!): BibleReference!
-  
+
   """
   Link a question to a CCC paragraph.
-  The 'order' parameter determines the sequence of multiple references.
+  The `order` parameter controls display sequence when multiple paragraphs are linked.
   Requires ADMIN role.
   """
   linkQuestionToCCC(questionId: UUID!, cccParagraphNumber: Int!, order: Int = 0): Question!
-  
+
   """
   Link a question to a Bible reference.
-  The 'order' parameter determines the sequence of multiple references.
+  The `order` parameter controls display sequence when multiple references are linked.
   Requires ADMIN role.
   """
   linkQuestionToBible(questionId: UUID!, bibleReferenceId: UUID!, order: Int = 0): Question!
-  
-  # =====================================================
-  # Phase 2: Explanation System Mutations
-  # =====================================================
-  
+
+  # ---------------------------------------------------
+  # EXPLANATIONS (Phase 2)
+  # ---------------------------------------------------
+
   """
-  Submit a text explanation for a question.
+  Submit a new text explanation for a catechism question.
+  Explanation is created with PENDING status and enters the moderation queue.
   Available to all authenticated users.
   """
   submitTextExplanation(input: SubmitTextExplanationInput!): Explanation!
-  
+
   """
-  Submit an audio or video explanation for a question.
-  File must be uploaded first using the file upload endpoint.
+  Submit an audio or video explanation for a catechism question.
+  The file must be uploaded first via POST /api/files/audio or /api/files/video.
+  Use the returned file ID here.
   Available to all authenticated users.
   """
   submitFileExplanation(input: SubmitFileExplanationInput!): Explanation!
-  
+
   """
-  Review an explanation (approve, reject, or request revision).
+  Submit a moderation review for an explanation.
+  Can approve, reject, or request revision, with optional per-criterion scoring
+  (accuracy, clarity, theological soundness — each 1–5).
   Requires PRIEST, THEOLOGY_REVIEWER, or ADMIN role.
   """
   reviewExplanation(input: ReviewExplanationInput!): ExplanationReview!
-  
+
   """
-  Flag an explanation for inappropriate content.
+  Flag an explanation as potentially problematic.
+  One flag per user per explanation. Use flagDetails to provide context.
   Available to all authenticated users.
   """
   flagExplanation(input: FlagExplanationInput!): ExplanationFlag!
-  
+
   """
-  Resolve a flag (mark as resolved or dismissed).
+  Resolve an open flag as RESOLVED (action taken) or DISMISSED (false alarm).
   Requires PRIEST, THEOLOGY_REVIEWER, or ADMIN role.
   """
   resolveFlag(input: ResolveFlagInput!): ExplanationFlag!
-  
+
   """
-  Vote on an explanation (helpful or not helpful).
+  Vote on whether an explanation is helpful.
+  One vote per user per explanation. Use updateVote to change your vote.
+  Only approved explanations can be voted on.
   Available to all authenticated users.
-  One vote per user per explanation.
   """
   voteOnExplanation(input: VoteOnExplanationInput!): ExplanationVote!
-  
+
   """
-  Update an existing vote
+  Change an existing vote on an explanation.
+  Requires authentication. User must have already voted.
   """
   updateVote(input: UpdateVoteInput!): ExplanationVote!
-  
+
   """
-  Remove a vote
+  Remove the current user's vote from an explanation.
+  Requires authentication.
   """
   removeVote(explanationId: UUID!): Boolean!
-  
+
   """
-  Delete an explanation (admin only).
+  Permanently delete an explanation and all associated reviews, flags, and votes.
   Requires ADMIN role.
   """
   deleteExplanation(id: UUID!): Boolean!
+
+  # ---------------------------------------------------
+  # COMMUNITY (Phase 3)
+  # ---------------------------------------------------
+
+  """
+  Update the current user's community profile.
+  Only provided fields are updated — omitted fields remain unchanged.
+  Requires authentication.
+  """
+  updateProfile(input: UpdateProfileInput!): UserProfile!
+
+  """
+  Rebuild the leaderboard snapshot for the given period type.
+  This is a potentially slow operation and should only be triggered
+  by a scheduled job or an admin manually.
+  Requires ADMIN role.
+  """
+  rebuildLeaderboard(type: LeaderboardType!): Boolean!
+
+  # ---------------------------------------------------
+  # SEARCH (Phase 4 — Elasticsearch)
+  # ---------------------------------------------------
+
+  """
+  Trigger a full reindex of all questions and approved explanations into Elasticsearch.
+  Use only after migrations or bulk data changes — slow on large datasets.
+  Requires ADMIN role.
+  """
+  reindexAll: ReindexResult!
+
+  # ---------------------------------------------------
+  # ANALYTICS (Phase 4 — Dashboard)
+  # ---------------------------------------------------
+
+  """
+  Trigger an immediate analytics snapshot outside the nightly schedule.
+  Returns the updated dashboard summary.
+  Requires ADMIN role.
+  """
+  triggerAnalyticsSnapshot: DashboardSummary!
 }
 
+# =====================================================
+# BOOKLET & CONTENT TYPES
+# =====================================================
+
 """
-A catechism booklet containing Acts, Subtitles, and Questions.
-Examples: Baltimore Catechism, Penny Catechism, etc.
+A catechism booklet — the top-level container for all content.
+Examples: Baltimore Catechism, Penny Catechism, Roman Catechism.
 """
 type CatechismBooklet {
   id: UUID!
-  """Name of the booklet"""
+  """Human-readable name of the booklet."""
   name: String!
-  """Diocese that owns or uses this booklet"""
+  """Diocese that owns or primarily uses this booklet."""
   diocese: String
-  """Version number (e.g., "1.0", "2nd Edition")"""
+  """Version string, e.g. "1.0" or "2nd Edition"."""
   version: String!
-  """Default language for this booklet (ISO 639-1 code)"""
+  """ISO 639-1 language code for the booklet's primary language."""
   languageDefault: String!
-  """All questions in this booklet"""
+  """All questions belonging to this booklet."""
   questions(language: String = "en"): [Question!]!
-  """When this booklet was created"""
+  """Timestamp of when this booklet was created."""
   createdAt: DateTime!
 }
 
 """
-A catechism question with its answer.
-Questions can be categorized under Subtitles and linked to CCC paragraphs and Bible verses.
-"""
-type Question {
-  id: UUID!
-  """Question number within the booklet (e.g., 1, 2, 3...)"""
-  number: Int!
-  """The question text in the requested language"""
-  text: String!
-  """The answer text in the requested language"""
-  answer: String!
-  """Optional category tag (e.g., "Creation", "Trinity", "Salvation")"""
-  category: String
-  """The booklet this question belongs to"""
-  booklet: CatechismBooklet!
-  """The subtitle (sub-section) this question is categorized under"""
-  subtitle: Subtitle
-  """The Act (major section) this question belongs to (via subtitle)"""
-  act: Act
-  """CCC paragraphs referenced by this question"""
-  cccReferences: [CCCParagraph!]!
-  """Bible verses referenced by this question"""
-  bibleReferences: [BibleReference!]!
-  """Whether this translation is official or community-contributed"""
-  translationOfficial: Boolean!
-  """List of languages this question is available in"""
-  availableLanguages: [String!]!
-}
-
-"""
-An Act represents a major section in a catechism.
-Examples: "The Creed", "The Sacraments", "The Commandments", "Prayer"
+An Act is a major thematic section within a catechism booklet.
+Examples: "The Creed", "The Sacraments", "The Ten Commandments", "The Lord's Prayer"
 """
 type Act {
   id: UUID!
-  """Act number (e.g., 1, 2, 3...)"""
+  """Sequential number of this Act within the booklet."""
   actNumber: Int!
-  """Title of the act in the requested language"""
+  """Title of the Act in the requested language."""
   title: String!
-  """Optional description of what this act covers"""
+  """Optional summary of what this Act covers."""
   description: String
-  """Order in which this act should be displayed"""
+  """Position in the display order relative to other Acts."""
   displayOrder: Int!
-  """The booklet this act belongs to"""
+  """The booklet this Act belongs to."""
   booklet: CatechismBooklet!
-  """Sub-sections within this act"""
+  """All Subtitles (sub-sections) within this Act."""
   subtitles(language: String = "en"): [Subtitle!]!
-  """List of languages this act is available in"""
+  """All language codes this Act has been translated into."""
   availableLanguages: [String!]!
 }
 
 """
-A Subtitle represents a sub-section within an Act.
-Examples: "God the Father", "Jesus Christ", "The Holy Spirit"
+A Subtitle is a sub-section within an Act, grouping related questions together.
+Examples: "God the Father", "The Incarnation", "The Resurrection"
 """
 type Subtitle {
   id: UUID!
-  """Subtitle number within the act (e.g., 1, 2, 3...)"""
+  """Sequential number of this Subtitle within its Act."""
   subtitleNumber: Int!
-  """Title of the subtitle in the requested language"""
+  """Title of the Subtitle in the requested language."""
   title: String!
-  """Optional description"""
+  """Optional summary description."""
   description: String
-  """Order in which this subtitle should be displayed"""
+  """Position in the display order relative to other Subtitles in the same Act."""
   displayOrder: Int!
-  """The act this subtitle belongs to"""
+  """The Act this Subtitle belongs to."""
   act: Act!
-  """Questions categorized under this subtitle"""
+  """All questions categorised under this Subtitle."""
   questions(language: String = "en"): [Question!]!
-  """List of languages this subtitle is available in"""
+  """All language codes this Subtitle has been translated into."""
   availableLanguages: [String!]!
 }
 
+"""
+A catechism question and its answer.
+Questions can be categorised under a Subtitle and cross-referenced with
+CCC paragraphs and Bible verses.
+"""
+type Question {
+  id: UUID!
+  """The question's sequential number within its booklet (e.g. 1, 2, 3…)."""
+  number: Int!
+  """The question text in the requested language."""
+  text: String!
+  """The answer text in the requested language."""
+  answer: String!
+  """Optional category tag for thematic grouping, e.g. "Trinity" or "Salvation"."""
+  category: String
+  """The booklet this question belongs to."""
+  booklet: CatechismBooklet!
+  """The Subtitle this question is categorised under, if any."""
+  subtitle: Subtitle
+  """The Act this question belongs to, resolved via its Subtitle."""
+  act: Act
+  """CCC paragraphs linked to this question as supporting references."""
+  cccReferences: [CCCParagraph!]!
+  """Bible verses linked to this question as supporting references."""
+  bibleReferences: [BibleReference!]!
+  """True if this translation is from the official source; false if community-contributed."""
+  translationOfficial: Boolean!
+  """All language codes this question has been translated into."""
+  availableLanguages: [String!]!
+}
+
+"""
+A paragraph from the Catechism of the Catholic Church (CCC).
+"""
 type CCCParagraph {
   id: UUID!
+  """The official paragraph number, e.g. 355."""
   paragraphNumber: Int!
+  """The paragraph text in the requested language."""
   text: String!
+  """Edition of the CCC, e.g. "2nd Edition"."""
   edition: String!
+  """Whether this text is under a licence that restricts reproduction."""
   licensed: Boolean!
 }
 
+"""
+A Bible verse or passage used as a reference for catechism questions.
+"""
 type BibleReference {
   id: UUID!
-  reference: String!  # "Genesis 1:27" or "Genesis 1:27-28"
+  """Human-readable reference string, e.g. "Genesis 1:27" or "John 3:16-17"."""
+  reference: String!
+  """The verse text in the requested language."""
   text: String!
+  """The name of the book, e.g. "Genesis", "Romans"."""
   book: String!
+  """Chapter number."""
   chapter: Int!
+  """Starting verse number."""
   verseStart: Int!
+  """Ending verse number for passage ranges (null for single verses)."""
   verseEnd: Int
+  """Bible translation used, e.g. "RSV-CE", "NABRE", "DRA"."""
   translation: String!
 }
 
+# =====================================================
+# AUTH TYPES
+# =====================================================
+
+"""
+Returned by login and register. Contains the JWT token and the authenticated user.
+Store the token and include it as `Authorization: Bearer <token>` on subsequent requests.
+"""
+type AuthPayload {
+  """Signed JWT token, valid for 24 hours."""
+  token: String!
+  """The authenticated user."""
+  user: User!
+}
+
+"""
+An application user account.
+"""
 type User {
   id: UUID!
+  """The user's email address (used as login identifier)."""
   email: String!
+  """The user's display name."""
   name: String!
+  """The user's role, which determines their permissions."""
   role: UserRole!
+  """Whether the user's email address has been verified."""
   verified: Boolean!
+  """The diocese the user is associated with, if any."""
   diocese: String
 }
 
+"""
+User roles in ascending order of permission level.
+"""
 enum UserRole {
+  """General registered user. Can submit explanations, vote, and flag content."""
   PUBLIC_USER
+  """Catechist. Same permissions as PUBLIC_USER with priority queue status."""
   CATECHIST
+  """Priest. Can review and approve/reject explanation submissions."""
   PRIEST
+  """Theology reviewer. Can review and approve/reject explanation submissions."""
   THEOLOGY_REVIEWER
+  """Platform administrator. Full access to all operations."""
   ADMIN
 }
 
 # =====================================================
-# Phase 2: Explanation System Types
+# EXPLANATION TYPES (Phase 2)
 # =====================================================
 
 """
-User-submitted explanation for a catechism question.
-Can be text, audio, or video format.
+A user-submitted explanation of a catechism question.
+Explanations can be text, audio, or video and go through a moderation
+workflow before being published to the public.
 """
 type Explanation {
   id: UUID!
+  """The question this explanation addresses."""
   question: Question!
+  """The user who submitted this explanation."""
   submitter: User!
+  """ISO 639-1 language code of the explanation content."""
   languageCode: String!
+  """Whether this is a text, audio, or video explanation."""
   contentType: ExplanationContentType!
+  """The explanation text (only present for TEXT type)."""
   textContent: String
+  """URL to the audio/video file (only present for AUDIO/VIDEO type)."""
   fileUrl: String
+  """File size in bytes (only present for AUDIO/VIDEO type)."""
   fileSizeBytes: Long
+  """MIME type of the file, e.g. "audio/mpeg" (only present for AUDIO/VIDEO type)."""
   fileMimeType: String
+  """Duration of the audio/video in seconds (only present for AUDIO/VIDEO type)."""
   durationSeconds: Int
+  """Current position in the moderation workflow."""
   submissionStatus: ExplanationStatus!
+  """Composite quality score 0–100, calculated from reviews and community votes."""
   qualityScore: Int
+  """Total number of times this explanation has been viewed."""
   viewCount: Int!
+  """Total number of helpful votes received."""
   helpfulCount: Int!
+  """When this explanation was first submitted."""
   submittedAt: DateTime!
+  """When this explanation first entered review (null if still PENDING)."""
   reviewedAt: DateTime
+  """When this explanation was approved (null if not yet approved)."""
   approvedAt: DateTime
+  """All moderator reviews for this explanation."""
   reviews: [ExplanationReview!]!
+  """All community flags raised against this explanation."""
   flags: [ExplanationFlag!]!
+  """All community votes on this explanation."""
   votes: [ExplanationVote!]!
+  """Aggregate vote statistics."""
   voteStatistics: VoteStatistics!
+  """Aggregate flag statistics."""
   flagStatistics: FlagStatistics!
 }
 
+"""
+The format of an explanation's primary content.
+"""
 enum ExplanationContentType {
+  """A written text explanation."""
   TEXT
+  """A recorded audio explanation."""
   AUDIO
+  """A recorded video explanation."""
   VIDEO
 }
 
+"""
+The current position of an explanation in the moderation workflow.
+"""
 enum ExplanationStatus {
+  """Newly submitted, awaiting a moderator to pick it up."""
   PENDING
+  """A moderator has opened it for review."""
   UNDER_REVIEW
+  """Approved and visible to the public."""
   APPROVED
+  """Rejected; the submitter may revise and resubmit."""
   REJECTED
+  """Previously approved but now flagged by the community; temporarily hidden."""
   FLAGGED
 }
 
 """
-Moderator review of an explanation
+A moderator's review of an explanation submission.
 """
 type ExplanationReview {
   id: UUID!
+  """The explanation being reviewed."""
   explanation: Explanation!
+  """The moderator who submitted this review."""
   reviewer: User!
+  """The review decision."""
   reviewStatus: ReviewStatus!
+  """Optional free-text feedback for the submitter."""
   reviewComments: String
+  """Overall quality rating 1–5."""
   qualityRating: Int
+  """Factual accuracy score 1–5."""
   accuracyScore: Int
+  """Clarity and understandability score 1–5."""
   clarityScore: Int
+  """Theological correctness score 1–5."""
   theologicalSoundnessScore: Int
+  """When this review was submitted."""
   reviewedAt: DateTime!
 }
 
+"""
+The outcome of a moderation review.
+"""
 enum ReviewStatus {
+  """Explanation is approved and will be published."""
   APPROVED
+  """Explanation is rejected. Reviewer should provide comments."""
   REJECTED
+  """Explanation needs changes before it can be approved."""
   NEEDS_REVISION
 }
 
 """
-Community flag on an explanation
+A community flag reporting a problem with an explanation.
 """
 type ExplanationFlag {
   id: UUID!
+  """The explanation being flagged."""
   explanation: Explanation!
+  """The user who raised this flag."""
   flagger: User!
+  """The category of problem being reported."""
   flagReason: FlagReason!
+  """Optional additional detail provided by the flagger."""
   flagDetails: String
+  """Current state of this flag in the resolution workflow."""
   flagStatus: FlagStatus!
+  """The moderator who resolved this flag (null if still open)."""
   moderator: User
+  """Notes left by the moderator when resolving the flag."""
   moderatorNotes: String
+  """When this flag was resolved (null if still open)."""
   resolvedAt: DateTime
+  """When this flag was raised."""
   createdAt: DateTime!
 }
 
+"""
+The reason a user has flagged an explanation.
+"""
 enum FlagReason {
+  """The explanation contains factual errors."""
   INACCURATE
+  """The explanation contains offensive or unsuitable content."""
   INAPPROPRIATE
+  """The explanation is deceptive or misleading."""
   MISLEADING
+  """The explanation is of very low quality."""
   POOR_QUALITY
+  """This explanation duplicates an existing one."""
   DUPLICATE
+  """The explanation does not address the question."""
   OFF_TOPIC
+  """Another reason not listed above (use flagDetails to explain)."""
   OTHER
 }
 
+"""
+The current state of a community flag.
+"""
 enum FlagStatus {
+  """Newly raised and awaiting moderator attention."""
   OPEN
+  """A moderator has looked at this but not yet made a decision."""
   REVIEWED
+  """The flag was valid and action has been taken."""
   RESOLVED
+  """The flag was investigated and found to be invalid."""
   DISMISSED
 }
 
 """
-User vote on explanation helpfulness
+A user's vote on whether an explanation was helpful.
+Each user may cast at most one vote per explanation.
 """
 type ExplanationVote {
   id: UUID!
+  """The explanation being voted on."""
   explanation: Explanation!
+  """The user who cast this vote."""
   user: User!
+  """True if the user found the explanation helpful; false otherwise."""
   isHelpful: Boolean!
+  """Optional comment explaining the vote."""
   voteComment: String
+  """When this vote was cast."""
   createdAt: DateTime!
 }
 
 """
-Uploaded file metadata
+Aggregate vote statistics for an explanation.
+"""
+type VoteStatistics {
+  """Total number of votes cast."""
+  totalVotes: Int!
+  """Number of votes marking the explanation as helpful."""
+  helpfulVotes: Int!
+  """Number of votes marking the explanation as not helpful."""
+  unhelpfulVotes: Int!
+  """Percentage of votes that are helpful (0.0–100.0)."""
+  helpfulPercentage: Float!
+}
+
+"""
+Aggregate flag statistics for an explanation.
+"""
+type FlagStatistics {
+  """Total number of flags ever raised."""
+  totalFlags: Int!
+  """Number of flags currently open and awaiting resolution."""
+  openFlags: Int!
+  """Number of flags that have been resolved."""
+  resolvedFlags: Int!
+  """Number of flags that were dismissed as invalid."""
+  dismissedFlags: Int!
+}
+
+"""
+Average review scores across all moderator reviews for an explanation.
+"""
+type ExplanationScores {
+  """Number of reviews included in the averages."""
+  reviewCount: Int!
+  """Average overall quality rating (1.0–5.0), null if no ratings given."""
+  avgQuality: Float
+  """Average factual accuracy score (1.0–5.0), null if no ratings given."""
+  avgAccuracy: Float
+  """Average clarity score (1.0–5.0), null if no ratings given."""
+  avgClarity: Float
+  """Average theological soundness score (1.0–5.0), null if no ratings given."""
+  avgTheological: Float
+}
+
+"""
+Indicates whether reviewers have reached a majority consensus on an explanation.
+"""
+type ReviewConsensus {
+  """True if more than half of reviewers agree on an outcome."""
+  hasConsensus: Boolean!
+  """The majority outcome (APPROVED or REJECTED), null if no consensus yet."""
+  consensusStatus: ReviewStatus
+  """Number of APPROVED reviews."""
+  approvalCount: Int!
+  """Number of REJECTED reviews."""
+  rejectionCount: Int!
+  """Number of NEEDS_REVISION reviews."""
+  revisionCount: Int!
+}
+
+"""
+Metadata for a file uploaded to the platform (audio, video, or image).
 """
 type FileUpload {
   id: UUID!
+  """The user who uploaded this file."""
   uploader: User!
+  """Original file name as provided by the client."""
   fileName: String!
+  """Server-side storage path."""
   filePath: String!
+  """File size in bytes."""
   fileSizeBytes: Long!
+  """MIME type, e.g. "audio/mpeg" or "video/mp4"."""
   mimeType: String!
+  """The broad category of this file."""
   uploadType: FileUploadType!
+  """Current state of any post-upload processing (e.g. transcoding)."""
   processingStatus: ProcessingStatus!
+  """Result of the virus/malware scan."""
   virusScanStatus: VirusScanStatus!
+  """Whether this file is publicly accessible without authentication."""
   isPublic: Boolean!
+  """Number of times this file has been served."""
   accessCount: Int!
+  """When this file was uploaded."""
   uploadedAt: DateTime!
 }
 
@@ -586,67 +1022,540 @@ enum FileUploadType {
 }
 
 enum ProcessingStatus {
+  """Waiting to be processed."""
   PENDING
+  """Currently being processed."""
   PROCESSING
+  """Processing finished successfully."""
   COMPLETED
+  """Processing failed. File may be unusable."""
   FAILED
 }
 
 enum VirusScanStatus {
+  """Waiting to be scanned."""
   PENDING
+  """Scan completed — no threats found."""
   CLEAN
+  """Scan found malware. File will not be served."""
   INFECTED
+  """Scan could not be completed."""
   FAILED
 }
 
+# =====================================================
+# COMMUNITY TYPES (Phase 3)
+# =====================================================
+
 """
-Vote statistics for an explanation
+A user's community profile — their public identity on the platform.
+Created automatically the first time myProfile is queried.
 """
-type VoteStatistics {
-  totalVotes: Int!
-  helpfulVotes: Int!
-  unhelpfulVotes: Int!
-  helpfulPercentage: Float!
+type UserProfile {
+  id: UUID!
+  """The ID of the app_user this profile belongs to."""
+  userId: UUID!
+  """Optional display name, shown instead of the account name in public contexts."""
+  displayName: String
+  """Short bio or personal statement."""
+  bio: String
+  """URL to the user's avatar image."""
+  avatarUrl: String
+  """The user's location (free text)."""
+  location: String
+  """The user's personal or professional website."""
+  websiteUrl: String
+  """Whether this profile is visible to other users."""
+  isPublic: Boolean!
+  """Total number of explanations submitted (all statuses)."""
+  totalSubmissions: Int!
+  """Number of explanations that have been approved."""
+  approvedSubmissions: Int!
+  """Number of votes this user has cast on others' explanations."""
+  totalVotesCast: Int!
+  """Number of helpful votes received on this user's approved explanations."""
+  totalHelpfulVotes: Int!
+  """Total points earned across all contributions."""
+  totalPoints: Long!
+  """Number of badges earned."""
+  badgeCount: Int!
+  """All badges earned by this user."""
+  badges: [UserBadge!]!
+  """All achievement progress records for this user."""
+  achievements: [UserAchievement!]!
+  """Recent contribution activity (last 30 days by default)."""
+  recentActivity: [ContributionActivity!]!
 }
 
 """
-Flag statistics for an explanation
+A badge that has been earned by a user.
 """
-type FlagStatistics {
+type UserBadge {
+  id: UUID!
+  """The badge definition."""
+  badge: Badge!
+  """When this badge was awarded."""
+  earnedAt: DateTime!
+  """Optional message explaining what triggered the award."""
+  contextNote: String
+}
+
+"""
+A badge definition — a recognisable achievement icon awarded to users.
+"""
+type Badge {
+  id: UUID!
+  """Unique machine-readable identifier, e.g. "FIRST_SUBMISSION"."""
+  code: String!
+  """Human-readable badge name, e.g. "First Steps"."""
+  name: String!
+  """Description of what this badge is awarded for."""
+  description: String!
+  """URL to the badge icon image."""
+  iconUrl: String
+  """Thematic category: SUBMISSION, REVIEW, COMMUNITY, or SPECIAL."""
+  badgeCategory: String!
+  """Points awarded when this badge is earned."""
+  pointsValue: Int!
+}
+
+"""
+A progress record tracking a user's progress toward a specific achievement.
+"""
+type UserAchievement {
+  id: UUID!
+  """The achievement definition."""
+  achievement: Achievement!
+  """The user's current metric value toward the target."""
+  currentValue: Int!
+  """Progress toward the target expressed as a percentage (0–100)."""
+  progressPercent: Int!
+  """True if the target has been reached and the achievement is complete."""
+  completed: Boolean!
+  """When the achievement was completed (null if not yet complete)."""
+  completedAt: DateTime
+}
+
+"""
+An achievement definition — a milestone that unlocks when a metric reaches a target value.
+"""
+type Achievement {
+  id: UUID!
+  """Unique machine-readable identifier, e.g. "ACH_SUB_10"."""
+  code: String!
+  """Human-readable achievement name."""
+  name: String!
+  """Description of the goal, e.g. "Submit 10 explanations"."""
+  description: String!
+  """URL to the achievement icon."""
+  iconUrl: String
+  """Thematic category: SUBMISSION, REVIEW, or COMMUNITY."""
+  achievementCategory: String!
+  """The internal metric key this achievement tracks, e.g. "approved_submissions"."""
+  metricKey: String!
+  """The metric value that must be reached to complete this achievement."""
+  targetValue: Int!
+  """Points awarded on completion."""
+  pointsValue: Int!
+}
+
+"""
+A single entry in the contribution activity log.
+"""
+type ContributionActivity {
+  id: UUID!
+  """The type of action performed: SUBMISSION, REVIEW, VOTE, or FLAG_RESOLVED."""
+  activityType: String!
+  """The type of entity involved, e.g. "EXPLANATION" or "FLAG"."""
+  entityType: String!
+  """The ID of the entity involved."""
+  entityId: UUID!
+  """Points earned for this activity."""
+  pointsEarned: Int!
+  """The calendar date on which this activity took place (ISO 8601)."""
+  activityDate: String!
+  """Exact timestamp of the activity."""
+  createdAt: DateTime!
+}
+
+"""
+A user's entry in a leaderboard snapshot.
+"""
+type LeaderboardEntry {
+  """Position on the leaderboard, starting from 1."""
+  rank: Int!
+  """The user this entry belongs to."""
+  userId: UUID!
+  """Display name shown on the leaderboard (falls back to account name)."""
+  displayName: String
+  """Total points earned in this leaderboard period."""
+  totalPoints: Int!
+  """Number of explanations submitted in this period."""
+  submissions: Int!
+  """Number of explanations approved in this period."""
+  approvals: Int!
+  """Number of helpful votes received in this period."""
+  helpfulVotes: Int!
+  """Total number of badges earned (all-time)."""
+  badgeCount: Int!
+}
+
+"""
+The time period covered by a leaderboard.
+"""
+enum LeaderboardType {
+  """Current ISO week (resets every Monday)."""
+  WEEKLY
+  """Current calendar month."""
+  MONTHLY
+  """All time — cumulative since the platform launched."""
+  ALL_TIME
+}
+
+# =====================================================
+# SEARCH TYPES (Phase 4 — Elasticsearch)
+# =====================================================
+
+"""
+Input parameters for a search query.
+All fields are optional — omitting `query` returns all results for the given filters.
+"""
+input SearchInput {
+  """
+  Full-text search query. Supports fuzzy matching and catechism synonyms
+  (e.g. searching "god" also matches "lord" and "almighty").
+  Leave blank to browse/filter without a text query.
+  """
+  query: String = ""
+
+  """
+  Restrict results to a single booklet by its ID.
+  """
+  bookletId: UUID
+
+  """
+  Restrict results to a specific language code, e.g. "en", "fr", "ig".
+  """
+  languageCode: String
+
+  """
+  Restrict results to a specific category tag, e.g. "Trinity" or "Sacraments".
+  """
+  category: String
+
+  """
+  Restrict results to questions linked to a specific CCC paragraph number.
+  """
+  cccParagraph: Int
+
+  """
+  Restrict results to questions linked to a specific Bible book, e.g. "Romans".
+  """
+  bibleBook: String
+
+  """
+  Page index, starting at 0.
+  """
+  page: Int = 0
+
+  """
+  Number of results per page. Capped at 50 server-side.
+  """
+  size: Int = 20
+}
+
+"""
+A single facet bucket — one distinct value and how many results match it.
+"""
+type FacetEntry {
+  """The facet value, e.g. "Trinity" or "en"."""
+  value: String!
+  """Number of search results that have this value."""
+  count: Int!
+}
+
+"""
+A named group of facet buckets for a single field.
+Example: name="category", buckets=[{value:"Trinity",count:12}, ...]
+"""
+type FacetGroup {
+  """The field this facet represents, e.g. "category", "language", or "act"."""
+  name: String!
+  """The individual value buckets, sorted by count descending."""
+  buckets: [FacetEntry!]!
+}
+
+"""
+Paginated search results for questions.
+"""
+type QuestionSearchResult {
+  """Matching questions for this page, ranked by relevance score."""
+  results: [QuestionSearchHit!]!
+  """Total number of matching questions across all pages."""
+  totalHits: Long!
+  """Current page index (0-based)."""
+  page: Int!
+  """Page size used for this query."""
+  size: Int!
+  """Total number of pages available."""
+  totalPages: Int!
+  """Whether there are more pages after this one."""
+  hasMore: Boolean!
+  """The query string used (empty string if a filter-only search)."""
+  query: String!
+  """Facet groups for refining the search (category, language, act)."""
+  facets: [FacetGroup!]!
+}
+
+"""
+A single question search hit returned by searchQuestions.
+"""
+type QuestionSearchHit {
+  """The matched question's database ID."""
+  id: UUID!
+  """Name of the booklet this question belongs to."""
+  bookletName: String!
+  """The question's sequential number within its booklet."""
+  questionNumber: Int!
+  """Category tag, if any."""
+  category: String
+  """Title of the subtitle this question sits under, in the result language."""
+  subtitleTitle: String
+  """Title of the act this question sits under, in the result language."""
+  actTitle: String
+  """The question text in the matched language."""
+  questionText: String!
+  """The answer text in the matched language."""
+  answerText: String!
+  """The language code of this result, e.g. "en"."""
+  languageCode: String!
+  """CCC paragraph numbers linked to this question."""
+  cccParagraphNumbers: [Int!]!
+  """Bible books linked to this question, e.g. ["Genesis", "John"]."""
+  bibleBooks: [String!]!
+}
+
+"""
+Paginated search results for approved explanations.
+"""
+type ExplanationSearchResult {
+  """Matching explanations for this page, ranked by relevance score."""
+  results: [ExplanationSearchHit!]!
+  """Total number of matching explanations across all pages."""
+  totalHits: Long!
+  """Current page index (0-based)."""
+  page: Int!
+  """Page size used for this query."""
+  size: Int!
+  """Total number of pages available."""
+  totalPages: Int!
+  """Whether there are more pages after this one."""
+  hasMore: Boolean!
+  """The query string used."""
+  query: String!
+  """Facet groups (contentType: TEXT, AUDIO, VIDEO)."""
+  facets: [FacetGroup!]!
+}
+
+"""
+A single explanation search hit returned by searchExplanations.
+"""
+type ExplanationSearchHit {
+  """The matched explanation's database ID."""
+  id: UUID!
+  """The ID of the question this explanation addresses."""
+  questionId: UUID!
+  """The question number, for display purposes."""
+  questionNumber: Int!
+  """Display name of the user who submitted this explanation."""
+  submitterName: String!
+  """Language code of the explanation content, e.g. "en"."""
+  languageCode: String!
+  """Content format: TEXT, AUDIO, or VIDEO."""
+  contentType: String!
+  """Text content (null for AUDIO/VIDEO explanations)."""
+  textContent: String
+  """Quality score 0–100, null if not yet scored."""
+  qualityScore: Int
+  """Number of helpful votes received."""
+  helpfulCount: Int!
+}
+
+"""
+Result of a full reindex operation triggered by the reindexAll mutation.
+"""
+type ReindexResult {
+  """Number of question documents successfully indexed."""
+  questionsIndexed: Int!
+  """Number of explanation documents successfully indexed."""
+  explanationsIndexed: Int!
+  """True if the operation completed without errors."""
+  success: Boolean!
+}
+
+# =====================================================
+# ANALYTICS TYPES (Phase 4 — Dashboard)
+# =====================================================
+
+"""
+Top-level analytics dashboard summary.
+Returns the most recent nightly snapshot enriched with today's live counts.
+All fields reflect data as of the last snapshot unless noted as "today".
+Requires ADMIN role.
+"""
+type DashboardSummary {
+  """Date of the most recent snapshot this data is drawn from (ISO 8601)."""
+  snapshotDate: String!
+
+  """Total number of catechism questions across all booklets."""
+  totalQuestions: Int!
+  """Total number of catechism booklets on the platform."""
+  totalBooklets: Int!
+
+  """Total registered users."""
+  totalUsers: Int!
+  """Number of users who performed any action today (live count)."""
+  activeUsersToday: Int!
+  """Number of new user registrations today (live count)."""
+  newUsersToday: Int!
+  """Breakdown of total users by role."""
+  roleBreakdown: RoleBreakdown
+
+  """Total explanation submissions across all statuses."""
+  totalExplanations: Int!
+  """Number of approved (published) explanations."""
+  approvedExplanations: Int!
+  """Number of explanations awaiting review."""
+  pendingExplanations: Int!
+  """Number of new submissions today (live count)."""
+  newExplanationsToday: Int!
+  """Number of explanations approved today (live count)."""
+  newApprovalsToday: Int!
+
+  """Platform-wide average quality score (0–100). Null if no scored explanations."""
+  avgQualityScore: Float
+  """Platform-wide average helpful vote percentage (0–100). Null if no votes cast."""
+  avgHelpfulPct: Float
+
+  """Number of currently open community flags."""
+  openFlags: Int!
+  """Current number of explanations in the moderation queue (PENDING + UNDER_REVIEW)."""
+  moderationQueueLength: Int!
+  """All-time average hours from submission to first review decision. Null if no reviews."""
+  avgReviewHours: Float
+  """Number of moderation reviews completed today (live count)."""
+  reviewsCompletedToday: Int!
+}
+
+"""
+Count of registered users broken down by role.
+"""
+type RoleBreakdown {
+  publicUsers: Int!
+  catechists: Int!
+  priests: Int!
+  theologyReviewers: Int!
+  admins: Int!
+}
+
+"""
+A single day's platform-wide snapshot. Used to render explanation trend charts.
+"""
+type DailySnapshot {
+  """The calendar date this snapshot covers (ISO 8601)."""
+  snapshotDate: String!
+  totalExplanations: Int!
+  approvedExplanations: Int!
+  pendingExplanations: Int!
+  """New submissions on this specific day."""
+  newExplanationsToday: Int!
+  """New approvals on this specific day."""
+  newApprovalsToday: Int!
+  totalVotes: Int!
   totalFlags: Int!
   openFlags: Int!
-  resolvedFlags: Int!
-  dismissedFlags: Int!
+  avgQualityScore: Float
+  avgHelpfulPct: Float
+  activeUsersToday: Int!
+  newUsersToday: Int!
 }
 
 """
-Average review scores for an explanation
+A single day's user registration snapshot. Used for user growth charts.
 """
-type ExplanationScores {
-  reviewCount: Int!
-  avgQuality: Float
-  avgAccuracy: Float
-  avgClarity: Float
-  avgTheological: Float
+type UserGrowthSnapshot {
+  """The calendar date this snapshot covers (ISO 8601)."""
+  snapshotDate: String!
+  totalUsers: Int!
+  """Number of new registrations on this specific day."""
+  newRegistrations: Int!
+  publicUsers: Int!
+  catechists: Int!
+  priests: Int!
+  theologyReviewers: Int!
+  admins: Int!
 }
 
 """
-Review consensus information
+A single day's moderation performance snapshot. Used for moderation efficiency charts.
 """
-type ReviewConsensus {
-  hasConsensus: Boolean!
-  consensusStatus: ReviewStatus
-  approvalCount: Int!
-  rejectionCount: Int!
-  revisionCount: Int!
+type ModerationSnapshot {
+  """The calendar date this snapshot covers (ISO 8601)."""
+  snapshotDate: String!
+  """Average hours from submission to first review decision on this day. Null if no reviews."""
+  avgReviewHours: Float
+  """Number of explanations in the queue at snapshot time."""
+  queueLength: Int!
+  """Number of reviews completed on this day."""
+  reviewsCompletedToday: Int!
+  """Number of flags resolved on this day."""
+  flagsResolvedToday: Int!
 }
 
-
-
-type AuthPayload {
-  token: String!
-  user: User!
+"""
+A ranked top-content entry, used for "best explanations" tables on the dashboard.
+"""
+type TopContentEntry {
+  """Position in the ranking, starting at 1."""
+  rank: Int!
+  """The database ID of the explanation or question."""
+  entityId: UUID!
+  """Either EXPLANATION or QUESTION."""
+  entityType: String!
+  """Human-readable label for display, e.g. "Q12 — John Smith"."""
+  label: String!
+  """The metric used for ranking, e.g. "quality_score" or "helpful_votes"."""
+  metricKey: String!
+  """The metric value."""
+  metricValue: Float!
 }
+
+"""
+Breakdown of all explanations by status, content type, and language.
+Useful for distribution pie and bar charts on the analytics dashboard.
+"""
+type ContentBreakdown {
+  """Counts by submission status: APPROVED, PENDING, REJECTED, FLAGGED."""
+  byStatus: [ContentBreakdownEntry!]!
+  """Counts by content format: TEXT, AUDIO, VIDEO."""
+  byType: [ContentBreakdownEntry!]!
+  """Counts by language code: en, fr, ig, etc."""
+  byLanguage: [ContentBreakdownEntry!]!
+}
+
+"""
+One slice of a content breakdown — a label and its count.
+"""
+type ContentBreakdownEntry {
+  """The label for this slice, e.g. "APPROVED" or "en"."""
+  label: String!
+  """Number of explanations in this slice."""
+  count: Int!
+}
+
+# =====================================================
+# INPUT TYPES
+# =====================================================
 
 input RegisterInput {
   email: String!
@@ -731,22 +1640,12 @@ input CreateBibleReferenceInput {
   verseText: String!
 }
 
-# =====================================================
-# Phase 2: Explanation System Input Types
-# =====================================================
-
-"""
-Input for submitting a text explanation
-"""
 input SubmitTextExplanationInput {
   questionId: UUID!
   languageCode: String = "en"
   textContent: String!
 }
 
-"""
-Input for submitting an audio or video explanation
-"""
 input SubmitFileExplanationInput {
   questionId: UUID!
   languageCode: String = "en"
@@ -754,9 +1653,6 @@ input SubmitFileExplanationInput {
   fileId: UUID!
 }
 
-"""
-Input for reviewing an explanation
-"""
 input ReviewExplanationInput {
   explanationId: UUID!
   reviewStatus: ReviewStatus!
@@ -767,38 +1663,41 @@ input ReviewExplanationInput {
   theologicalSoundnessScore: Int
 }
 
-"""
-Input for flagging an explanation
-"""
 input FlagExplanationInput {
   explanationId: UUID!
   flagReason: FlagReason!
   flagDetails: String
 }
 
-"""
-Input for resolving a flag
-"""
 input ResolveFlagInput {
   flagId: UUID!
   resolution: FlagStatus!
   moderatorNotes: String!
 }
 
-"""
-Input for voting on an explanation
-"""
 input VoteOnExplanationInput {
   explanationId: UUID!
   isHelpful: Boolean!
   voteComment: String
 }
 
-"""
-Input for updating a vote
-"""
 input UpdateVoteInput {
   explanationId: UUID!
   isHelpful: Boolean!
   voteComment: String
+}
+
+input UpdateProfileInput {
+  """Update the display name shown publicly on the platform."""
+  displayName: String
+  """Short bio or personal statement (plain text)."""
+  bio: String
+  """URL to an avatar image. Recommended size: 256×256px."""
+  avatarUrl: String
+  """Free-text location, e.g. "Lagos, Nigeria" or "Diocese of Enugu"."""
+  location: String
+  """Personal or professional website URL."""
+  websiteUrl: String
+  """Set to false to hide your profile from other users."""
+  isPublic: Boolean
 }

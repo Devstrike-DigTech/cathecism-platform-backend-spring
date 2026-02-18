@@ -2,22 +2,51 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:16-alpine
-    container_name: catechism-postgres
+    image: postgres:15-alpine
+    container_name: catechism-db
     environment:
       POSTGRES_DB: catechism_db
       POSTGRES_USER: catechism_user
-      POSTGRES_PASSWORD: catechism123!
-    ports:
-      - "5432:5432"
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U catechism_user -d catechism_db"]
+      test: ["CMD-SHELL", "pg_isready -U catechism_user"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  backend:
+    build: .
+    container_name: catechism-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/catechism_db
+      SPRING_DATASOURCE_USERNAME: catechism_user
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-changeme}
+      APP_JWT_SECRET: ${JWT_SECRET}
+      SPRING_PROFILES_ACTIVE: production
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Optional: Elasticsearch (only if you want search)
+  elasticsearch:
+    image: elasticsearch:8.10.4
+    container_name: catechism-search
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+
 volumes:
   postgres_data:
-    driver: local
+  es_data:

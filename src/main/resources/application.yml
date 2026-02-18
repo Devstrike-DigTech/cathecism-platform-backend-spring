@@ -1,68 +1,61 @@
 spring:
-  application:
-    name: catechism-platform
-  
   datasource:
-    url: jdbc:postgresql://localhost:5432/catechism_db
-    username: catechism_user
-    password: catechism123!
+    url: ${DATABASE_URL}
     driver-class-name: org.postgresql.Driver
-  
+
   jpa:
     hibernate:
-      ddl-auto: validate  # Flyway handles schema
+      ddl-auto: validate
     show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-    open-in-view: false
-  
+
   flyway:
     enabled: true
     baseline-on-migrate: true
-    locations: classpath:db/migration
-  
+
   graphql:
     graphiql:
-      enabled: true
-      path: /graphiql
-    path: /graphql
-    schema:
-      printer:
-        enabled: true
-    websocket:
+      enabled: false  # Disable in production
 
-  security:
-    user:
-      name: admin
-      password: admin  # Change in production
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRestClientAutoConfiguration
 
 server:
-  port: 8080
+  port: ${PORT:8080}
   error:
     include-message: always
     include-binding-errors: always
 
+management:
+  health:
+    elasticsearch:
+      enabled: false
+
 logging:
   level:
-    com.catechism.platform: DEBUG
-    org.springframework.graphql: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    root: INFO
+    com.catechism.platform: INFO
 
-# Custom application properties
 app:
   jwt:
-    secret: "your-256-bit-secret-key-change-this-in-production-please-make-it-long"
-    expiration: 86400000  # 24 hours in milliseconds
-  
+    secret: ${JWT_SECRET}
+    expiration: 86400000
+
+  file-upload:
+    base-path: /app/uploads
+
   default-language: en
-  
   supported-languages:
     - en
     - fr
     - es
     - pt
-    - ig  # Igbo
-    - yo  # Yoruba
+    - ig
+    - yo
+
+search:
+  enabled: false

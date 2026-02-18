@@ -1,0 +1,57 @@
+{
+  "analysis": {
+    "analyzer": {
+      "catechism_analyzer": {
+        "type": "custom",
+        "tokenizer": "standard",
+        "filter": [
+          "lowercase",
+          "asciifolding",
+          "catechism_stop",
+          "catechism_synonym",
+          "snowball_english"
+        ]
+      },
+      "catechism_search_analyzer": {
+        "type": "custom",
+        "tokenizer": "standard",
+        "filter": [
+          "lowercase",
+          "asciifolding",
+          "catechism_stop",
+          "catechism_synonym"
+        ]
+      }
+    },
+    "filter": {
+      "catechism_stop": {
+        "type": "stop",
+        "stopwords": "_english_"
+      },
+      "snowball_english": {
+        "type": "snowball",
+        "language": "English"
+      },
+      "catechism_synonym": {
+        "type": "synonym",
+        "synonyms": [
+          "god, lord, almighty",
+          "jesus, christ, messiah, saviour, savior",
+          "holy spirit, holy ghost, paraclete",
+          "church, catholic church, ecclesia",
+          "baptism, christening",
+          "eucharist, communion, mass, lord's supper",
+          "confession, reconciliation, penance",
+          "confirmation, chrismation",
+          "prayer, supplication, intercession",
+          "sin, transgression, wrongdoing",
+          "salvation, redemption, deliverance",
+          "gospel, good news",
+          "bible, scripture, sacred scripture, holy scripture",
+          "catechism, teaching, doctrine",
+          "commandment, precept, law"
+        ]
+      }
+    }
+  }
+}

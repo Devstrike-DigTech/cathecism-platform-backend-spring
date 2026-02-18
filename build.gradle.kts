@@ -41,6 +41,8 @@ dependencies {
     // CSV Import
     implementation("org.apache.commons:commons-csv:1.10.0")
 
+    // Elasticsearch
+    implementation("org.springframework.boot:spring-boot-starter-data-elasticsearch")
 
     // JWT
     implementation("io.jsonwebtoken:jjwt-api:0.12.3")

@@ -21,7 +21,9 @@ interface CatechismBookletRepository : JpaRepository<CatechismBooklet, UUID> {
 @Repository
 interface CatechismQuestionRepository : JpaRepository<CatechismQuestion, UUID> {
     fun findByBookletId(bookletId: UUID): List<CatechismQuestion>
-    
+    fun findByBookletIdAndQuestionNumber(bookletId: UUID, questionNumber: Int): CatechismQuestion?
+
+
     @Query("""
         SELECT q FROM CatechismQuestion q
         LEFT JOIN FETCH q.translations
