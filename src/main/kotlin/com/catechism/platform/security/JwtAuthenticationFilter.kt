@@ -1,6 +1,5 @@
 package com.catechism.platform.security
 
-import com.catechism.platform.service.AuthenticationService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -13,8 +12,7 @@ import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
 class JwtAuthenticationFilter(
-    private val jwtTokenProvider: JwtTokenProvider,
-    private val authenticationService: AuthenticationService
+    private val jwtTokenProvider: JwtTokenProvider
 ) : OncePerRequestFilter() {
 
     override fun doFilterInternal(
@@ -26,13 +24,15 @@ class JwtAuthenticationFilter(
             val token = extractTokenFromRequest(request)
 
             if (token != null && jwtTokenProvider.validateToken(token)) {
-                val user = authenticationService.getUserFromToken(token)
+                // Extract claims directly from the token — no service dependency needed
+                val email = jwtTokenProvider.getEmailFromToken(token)
+                val role  = jwtTokenProvider.getRoleFromToken(token)
 
-                if (user != null) {
-                    val authorities = listOf(SimpleGrantedAuthority("ROLE_${user.role}"))
+                if (email != null && role != null) {
+                    val authorities = listOf(SimpleGrantedAuthority("ROLE_$role"))
 
                     val authentication = UsernamePasswordAuthenticationToken(
-                        user.email,
+                        email,
                         null,
                         authorities
                     )
@@ -49,12 +49,11 @@ class JwtAuthenticationFilter(
     }
 
     /**
-     * Extract JWT token from Authorization header
+     * Extract JWT token from Authorization header.
      * Expected format: "Bearer <token>"
      */
     private fun extractTokenFromRequest(request: HttpServletRequest): String? {
         val bearerToken = request.getHeader("Authorization")
-
         return if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             bearerToken.substring(7)
         } else {

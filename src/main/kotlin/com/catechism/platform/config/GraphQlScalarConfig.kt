@@ -13,6 +13,8 @@ class GraphQlScalarConfig {
             wiringBuilder
                 .scalar(ExtendedScalars.UUID)
                 .scalar(ExtendedScalars.DateTime)
+                .scalar(ExtendedScalars.GraphQLLong)
+
         }
     }
 }
