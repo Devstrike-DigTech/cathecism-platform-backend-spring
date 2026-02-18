@@ -1,0 +1,69 @@
+spring:
+datasource:
+  url: ${DATABASE_URL}
+  driver-class-name: org.postgresql.Driver
+  hikari:
+    maximum-pool-size: 10
+    minimum-idle: 2
+
+jpa:
+  hibernate:
+    ddl-auto: validate
+  show-sql: false
+  open-in-view: false
+
+flyway:
+  enabled: true
+  baseline-on-migrate: true
+  validate-on-migrate: true
+
+graphql:
+  graphiql:
+    enabled: false
+  path: /graphql
+
+autoconfigure:
+  exclude:
+    - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
+    - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
+    - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchRepositoriesAutoConfiguration
+    - org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRepositoriesAutoConfiguration
+    - org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRestClientAutoConfiguration
+
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: never
+
+management:
+  health:
+    elasticsearch:
+      enabled: false
+
+logging:
+  level:
+    root: INFO
+    com.catechism.platform: INFO
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration: 86400000
+
+  file-upload:
+    base-path: /app/uploads
+
+  default-language: en
+  supported-languages:
+    - en
+    - fr
+    - es
+    - pt
+    - ig
+    - yo
+
+search:
+  enabled: false
